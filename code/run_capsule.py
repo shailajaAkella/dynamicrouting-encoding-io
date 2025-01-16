@@ -107,7 +107,7 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
     # occur and the pipeline will fail, so use session_id as filename prefix:
     #   /results/<sessionId>.suffix
     logger.info(f"Writing results for {session_id}")
-    np.savez(f'/results/{session_id}.npz', **results | {"params": params.to_dict() | {'session_id': session_id}})
+    np.savez(f'/results/{session_id}_fullmodel.npz', **results | {"params": params.to_dict() | {'session_id': session_id}})
 
 # define run params here ------------------------------------------- #
 
