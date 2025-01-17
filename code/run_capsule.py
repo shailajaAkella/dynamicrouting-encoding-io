@@ -110,19 +110,19 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
             subfolder = 'full'
         else:
             subfolder = 'reduced'
-        path = f'/results/{subfolder}/{session_id}_{model_name}_inputs.npz'
-        logger.info(f"Writing {path}")
-        with open(path, 'wb') as f:
-            np.savez(
-                f,
-                design_matrix=np.full((5, 5), 1.1),
-                spike_rate=np.full((5, 5), 1.1),
-                params={
-                    **params.to_dict(),
-                    'session_id': session_id,
-                    'model_name': model_name,
-                },
-            )
+        output_path = pathlib.Path(f'/results/{subfolder}/{session_id}_{model_name}_inputs.npz')
+        output_path.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Writing {output_path}")
+        np.savez(
+            file=output_path,
+            design_matrix=np.full((5, 5), 1.1),
+            spike_rate=np.full((5, 5), 1.1),
+            params={
+                **params.to_dict(),
+                'session_id': session_id,
+                'model_name': model_name,
+            },
+        )
 
 # define run params here ------------------------------------------- #
 
