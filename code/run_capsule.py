@@ -105,7 +105,12 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
     #   /results/<sessionId>.suffix
 
     for model_name in ('full_model', 'drop_context', 'drop_face_features'):
-        path = f'/results/{session_id}_{model_name}_inputs.npz'
+        # pipeline will execute different behavior for files in different subfolders:
+        if model_name == 'full_model':
+            subfolder = 'full'
+        else:
+            subfolder = 'reduced'
+        path = f'/results/{subfolder}/{session_id}_{model_name}_inputs.npz'
         logger.info(f"Writing {path}")
         np.savez(path, **results | {"params": params.to_dict() | {'session_id': session_id, 'model_name': model_name}})
 
