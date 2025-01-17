@@ -112,7 +112,17 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
             subfolder = 'reduced'
         path = f'/results/{subfolder}/{session_id}_{model_name}_inputs.npz'
         logger.info(f"Writing {path}")
-        np.savez(path, **results | {"params": params.to_dict() | {'session_id': session_id, 'model_name': model_name}})
+        with open(path, 'wb') as f:
+            np.savez(
+                f,
+                design_matrix=np.full((5, 5), 1.1),
+                spike_rate=np.full((5, 5), 1.1),
+                params={
+                    **params.to_dict(),
+                    'session_id': session_id,
+                    'model_name': model_name,
+                },
+            )
 
 # define run params here ------------------------------------------- #
 
