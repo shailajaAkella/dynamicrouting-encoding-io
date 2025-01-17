@@ -94,21 +94,20 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
     trials_df = nwb.trials[:]
     units_df = nwb.units[:]
     
-    # Process data here, with test mode implemented to break out of the loop early:
+    # Process data here, with test mode implemented to break out of the loop early or use reduced param set:
+    if test:
+        logger.info("TEST | Using reduced params set")
     logger.info(f"Processing {session_id} with {params.to_json()}")
-    results = {}
-    for structure, structure_df in units_df.groupby('structure'):
-        results[structure] = len(structure_df)
-        if test:
-            logger.info("TEST | Exiting after first structure")
-            break
 
     # Save data to files in /results
     # If the same name is used across parallel runs of this capsule in a pipeline, a name clash will
     # occur and the pipeline will fail, so use session_id as filename prefix:
     #   /results/<sessionId>.suffix
-    logger.info(f"Writing results for {session_id}")
-    np.savez(f'/results/{session_id}_fullmodel.npz', **results | {"params": params.to_dict() | {'session_id': session_id}})
+
+    for model_name in ('full_model', 'drop_context', 'drop_face_features'):
+        path = f'/results/{session_id}_{model_name}_inputs.npz'
+        logger.info(f"Writing {path}")
+        np.savez(path, **results | {"params": params.to_dict() | {'session_id': session_id, 'model_name': model_name}})
 
 # define run params here ------------------------------------------- #
 
