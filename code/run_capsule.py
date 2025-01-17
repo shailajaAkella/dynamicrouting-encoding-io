@@ -111,7 +111,7 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
         else:
             subfolder = 'reduced'
         output_path = pathlib.Path(f'/results/{subfolder}/{session_id}_{model_name}_inputs.npz')
-        output_path.mkdir(parents=True, exist_ok=True)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         logger.info(f"Writing {output_path}")
         np.savez(
             file=output_path,
