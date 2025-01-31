@@ -137,30 +137,51 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
 # this is an example from Sam's processing code, replace with your own parameters as needed:
 @dataclasses.dataclass
 class Params:
-
     session_id: str 
+    time_of_interest: str = 'quiescent'
+    spontaneous_duration: float = 2 * 60 # in seconds
+    input_variables: list = None
+    input_window_lengths: dict = None
+    drop_variables: list = None
+    unit_inclusion_criteria: dict =  {'isi_violations': 0.1,
+                                      'presence_ratio': 0.99,
+                                      'amplitude_cutoff': 0.1,
+                                      'firing_rate': 1}
+    run_on_qc_units: bool = False
+    spike_bin_width: float = 0.025
+    areas_to_include: list = None
+    areas_to_exclude: list = None
+    orthogonalize_against_context: list = ['LP_features'],
+    quiescent_start_time: float = -1.5
+    quiescent_stop_time: float = 0
+    trial_start_time: float = -2
+    trial_stop_time: float = 3
+    intercept: bool = True
 
-    nUnitSamples: int = 20
-    unitSampleSize: int = 20
-    windowDur: float = 1
-    binSize: float = 1
-    nShuffles: int | str = 100
-    binStart: int = -windowDur
-    n_units: list = dataclasses.field(default_factory=lambda: [5, 10, 20, 40, 60, 'all'])
-    decoder_type: str | Literal['linearSVC', 'LDA', 'RandomForest', 'LogisticRegression'] = 'LogisticRegression'
+    def validate_params(self):
+        """Validation logic to ensure parameters are consistent."""
+        valid_times_of_interest = ['trial', 'full_trial', 'spontaneous_trial', 'quiescent', 'spontaneous_quiescent', 'full_spontaneous', 'full']
 
-    @property
-    def bins(self) -> npt.NDArray[np.float64]:
-        return np.arange(self.binStart, self.windowDur+self.binSize, self.binSize)
+        if self.time_of_interest not in valid_times_of_interest:
+            raise ValueError(f"Invalid time_of_interest: {self.time_of_interest}")
 
-    @property
-    def nBins(self) -> int:
-        return self.bins.size - 1
-    
-    def to_dict(self) -> dict[str, Any]:
-        """dict of field name: value pairs, including values from property getters"""
-        return dataclasses.asdict(self) | {k: getattr(self, k) for k in dir(self.__class__) if isinstance(getattr(self.__class__, k), property)}
+        if self.spike_bin_width <= 0:
+            raise ValueError(f"Invalid spike_bin_width: {self.spike_bin_width}")
 
+        # Add more validation checks as needed
+
+    def update_metric(self, key: str, value):
+        """Update a single parameter."""
+        if hasattr(self, key):
+            setattr(self, key, value)
+        else:
+            raise AttributeError(f"{key} is not a valid attribute of Params")
+
+    def update_multiple_metrics(self, updates: dict):
+        """Update multiple parameters at once."""
+        for key, value in updates.items():
+            self.update_metric(key, value)
+            
     def to_json(self, **dumps_kwargs) -> str:
         """json string of field name: value pairs, excluding values from property getters (which may be large)"""
         return json.dumps(dataclasses.asdict(self), **dumps_kwargs)
