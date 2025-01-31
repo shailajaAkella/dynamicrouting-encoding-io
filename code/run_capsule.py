@@ -40,6 +40,7 @@ logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR) # suppress 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('--session_id', type=str, default=None)
+    parser.models_to_run('--features_to_drop', type = list, default = None)
     parser.add_argument('--logging_level', type=str, default='INFO')
     parser.add_argument('--test', type=int, default=0)
     parser.add_argument('--update_packages_from_source', type=int, default=1)
@@ -90,11 +91,8 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
         logger.info(f"Skipping {session_id}: {exc!r}")
         return
     
-    # Get components from the nwb file:
-    trials_df = nwb.trials[:]
-    units_df = nwb.units[:]
-    
     # Process data here, with test mode implemented to break out of the loop early or use reduced param set:
+    
     if test:
         logger.info("TEST | Using reduced params set")
     logger.info(f"Processing {session_id} with {params.to_json()}")
@@ -104,7 +102,25 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
     # occur and the pipeline will fail, so use session_id as filename prefix:
     #   /results/<sessionId>.suffix
 
-    for model_name in ('full_model', 'drop_context', 'drop_face_features'):
+
+    # fullmodel
+    io_params = io_utils.RunParams(session_id=session_id)
+    io_params.update_multiple_metrics({key:value for key, value in params.items()})   
+    io_params.update_metric("model_label", "fullmodel")  
+    io_params.validate_params()
+    run_params = params.get_params()
+
+
+
+
+
+
+    # drop model
+    if args.features_to_drop is not None: 
+        features_to_drop = args.features_to_drop
+    else: 
+        features_to_drop = ['drop_' + input_feature for input_feature in params.input_variables]
+    for model_name in features_to_drop:
         # pipeline will execute different behavior for files in different subfolders:
         if model_name == 'full_model':
             subfolder = 'full'
@@ -158,30 +174,6 @@ class Params:
     trial_stop_time: float = 3
     intercept: bool = True
 
-    def validate_params(self):
-        """Validation logic to ensure parameters are consistent."""
-        valid_times_of_interest = ['trial', 'full_trial', 'spontaneous_trial', 'quiescent', 'spontaneous_quiescent', 'full_spontaneous', 'full']
-
-        if self.time_of_interest not in valid_times_of_interest:
-            raise ValueError(f"Invalid time_of_interest: {self.time_of_interest}")
-
-        if self.spike_bin_width <= 0:
-            raise ValueError(f"Invalid spike_bin_width: {self.spike_bin_width}")
-
-        # Add more validation checks as needed
-
-    def update_metric(self, key: str, value):
-        """Update a single parameter."""
-        if hasattr(self, key):
-            setattr(self, key, value)
-        else:
-            raise AttributeError(f"{key} is not a valid attribute of Params")
-
-    def update_multiple_metrics(self, updates: dict):
-        """Update multiple parameters at once."""
-        for key, value in updates.items():
-            self.update_metric(key, value)
-            
     def to_json(self, **dumps_kwargs) -> str:
         """json string of field name: value pairs, excluding values from property getters (which may be large)"""
         return json.dumps(dataclasses.asdict(self), **dumps_kwargs)
