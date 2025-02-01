@@ -110,12 +110,13 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
     io_params.validate_params()
     run_params = params.get_params()
 
-    # Capsule 1 - GLM_inputs
     units_table, behavior_info, _ = io_utils.get_session_data(session)
     fit = io_utils.extract_unit_data(run_params, units_table, behavior_info)
     design = io_utils.DesignMatrix(fit)
     design, fit = io_utils.add_kernels(design, run_params, session, fit, behavior_info)
     design_mat = design.get_X()
+
+    
 
 
     # drop model
