@@ -116,14 +116,12 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
     design, fit = io_utils.add_kernels(design, run_params, session, fit, behavior_info)
     design_mat = design.get_X()
 
-    
-
-
     # drop model
-    if args.features_to_drop is not None: 
-        features_to_drop = args.features_to_drop
-    else: 
-        features_to_drop = ['drop_' + input_feature for input_feature in params.input_variables]
+    features_to_drop = args.features_to_drop or [
+        'facial_features' if f in {'ears', 'nose', 'jaw', 'whiskers'} else
+        f if f not in {'hit', 'miss', 'correct_reject', 'false_alarm'} else 'input_features'
+        for f in run_params.input_variables]
+
     for model_name in features_to_drop:
         # pipeline will execute different behavior for files in different subfolders:
         if model_name == 'full_model':
@@ -163,15 +161,16 @@ class Params:
     input_variables: list = None
     input_window_lengths: dict = None
     drop_variables: list = None
-    unit_inclusion_criteria: dict =  {'isi_violations': 0.1,
-                                      'presence_ratio': 0.99,
-                                      'amplitude_cutoff': 0.1,
-                                      'firing_rate': 1}
+    unit_inclusion_criteria: dict[str, float] = dataclasses.field(default_factory=lambda: {'isi_violations': 0.1, 
+                                                                                            'presence_ratio': 0.99, 
+                                                                                            'amplitude_cutoff': 0.1, 
+                                                                                            'firing_rate': 1})
+ 
     run_on_qc_units: bool = False
     spike_bin_width: float = 0.025
     areas_to_include: list = None
     areas_to_exclude: list = None
-    orthogonalize_against_context: list = ['LP_features'],
+    orthogonalize_against_context: list = dataclasses.field(default_factory = lambda:['facial_features'])
     quiescent_start_time: float = -1.5
     quiescent_stop_time: float = 0
     trial_start_time: float = -2
