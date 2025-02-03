@@ -96,7 +96,11 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
     if test:
         logger.info("TEST | Using reduced params set")
         unit_counts_per_areas = session.units_table['structure'].value_counts()
+        filtered_structures = unit_counts_per_areas[(unit_counts_per_areas >= 50) & (~unit_counts_per_areas.index.str.islower())]
+        params.areas_to_include = filtered_structures.index[0] if not filtered_structures.empty else None
         params.areas_to_include = structure_counts[structure_counts >= 50].index[0]
+        params.time_of_interest = 'quiescent'
+
     logger.info(f"Processing {session_id} with {params.to_json()}")
 
     # Save data to files in /results
@@ -133,7 +137,11 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
         subfolder = 'full' if feature == 'fullmodel' else 'reduced'
 
         if feature != 'fullmodel':
-            io_params.update_multiple_metrics({"drop_variables": feature, "model_label": f'drop_{feature}'})
+            if feature not in fit['failed_kernels']:
+                io_params.update_multiple_metrics({"drop_variables": feature, "model_label": f'drop_{feature}'})
+            else:
+                logger.warning(f"Failed kernel {feature}, skipping dropout analyses.")
+                continue 
         else:
             io_params.update_metric("model_label", "fullmodel")
 
@@ -175,7 +183,7 @@ class Params:
     time_of_interest: str = 'quiescent'
     spontaneous_duration: float = 2 * 60 # in seconds
     input_variables: list = None
-    input_offset: bool = True
+    input_offsets: bool = True
     input_window_lengths: dict = None
     drop_variables: list = None
     unit_inclusion_criteria: dict[str, float] = dataclasses.field(default_factory=lambda: {'isi_violations': 0.1, 
