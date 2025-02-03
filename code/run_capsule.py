@@ -95,6 +95,8 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
     
     if test:
         logger.info("TEST | Using reduced params set")
+        unit_counts_per_areas = session.units_table['structure'].value_counts()
+        params.areas_to_include = structure_counts[structure_counts >= 50].index[0]
     logger.info(f"Processing {session_id} with {params.to_json()}")
 
     # Save data to files in /results
@@ -110,7 +112,6 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
     run_params = params.get_params()
 
     units_table, behavior_info, _ = io_utils.get_session_data(session)
-
     
     # dropout models
     features_to_drop = args.features_to_drop or (
@@ -174,6 +175,7 @@ class Params:
     time_of_interest: str = 'quiescent'
     spontaneous_duration: float = 2 * 60 # in seconds
     input_variables: list = None
+    input_offset: bool = True
     input_window_lengths: dict = None
     drop_variables: list = None
     unit_inclusion_criteria: dict[str, float] = dataclasses.field(default_factory=lambda: {'isi_violations': 0.1, 
