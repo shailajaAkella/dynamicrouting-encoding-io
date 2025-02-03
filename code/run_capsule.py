@@ -103,43 +103,58 @@ def process_session(session_id: str, params: "Params", test: int = 0) -> None:
     #   /results/<sessionId>.suffix
 
 
-    # fullmodel
+    # fullmodel params to define all input variables 
     io_params = io_utils.RunParams(session_id=session_id)
     io_params.update_multiple_metrics({key:value for key, value in params.items()})   
-    io_params.update_metric("model_label", "fullmodel")  
     io_params.validate_params()
     run_params = params.get_params()
 
     units_table, behavior_info, _ = io_utils.get_session_data(session)
-    fit = io_utils.extract_unit_data(run_params, units_table, behavior_info)
-    design = io_utils.DesignMatrix(fit)
-    design, fit = io_utils.add_kernels(design, run_params, session, fit, behavior_info)
-    design_mat = design.get_X()
 
-    # drop model
-    features_to_drop = args.features_to_drop or [
-        'facial_features' if f in {'ears', 'nose', 'jaw', 'whiskers'} else
-        f if f not in {'hit', 'miss', 'correct_reject', 'false_alarm'} else 'input_features'
-        for f in run_params.input_variables]
+    
+    # dropout models
+    features_to_drop = args.features_to_drop or (
+        list(run_params['input_variables'].keys()) +  
+        [value[key]['function_call'] for key, value in run_params['input_variables'].items()]
+    )
+    # Remove duplicates
+    features_to_drop = list(set(features_to_drop))
 
-    for model_name in features_to_drop:
+    output_dirs = {'full': pathlib.Path(f'/results/full'), 'reduced': pathlib.Path(f'/results/reduced')}
+    for path in output_dirs.values():
+        path.mkdir(parents=True, exist_ok=True)
+
+    for feature in ['fullmodel'] + features_to_drop:
         # pipeline will execute different behavior for files in different subfolders:
-        if model_name == 'full_model':
-            subfolder = 'full'
+        io_params = io_utils.RunParams(session_id=session_id)
+        io_params.update_multiple_metrics({key:value for key, value in params.items()})   
+
+        subfolder = 'full' if feature == 'fullmodel' else 'reduced'
+
+        if feature != 'fullmodel':
+            io_params.update_multiple_metrics({"drop_variables": feature, "model_label": f'drop_{feature}'})
         else:
-            subfolder = 'reduced'
-        output_path = pathlib.Path(f'/results/{subfolder}/{session_id}_{model_name}_inputs.npz')
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+            io_params.update_metric("model_label", "fullmodel")
+
+        io_params.validate_params()
+        run_params = params.get_params()
+
+        fit = io_utils.extract_unit_data(run_params, units_table, behavior_info)
+        design = io_utils.DesignMatrix(fit)
+        design, fit = io_utils.add_kernels(design, run_params, session, fit, behavior_info)
+        design_mat = design.get_X()
+        fit['is_good_behavior'] = behavior_info['is_good_behavior']
+        fit['dprime'] = behavior_info['dprime']
+
+
+        # Save results
+        output_path = output_dirs[subfolder] / f'{session_id}_{feature}_inputs.npz'
         logger.info(f"Writing {output_path}")
         np.savez(
             file=output_path,
-            design_matrix=np.full((5, 5), 1.1),
-            spike_rate=np.full((5, 5), 1.1),
-            params={
-                **params.to_dict(),
-                'session_id': session_id,
-                'model_name': model_name,
-            },
+            design_matrix=design_mat,  # Ensure this is compatible with np.savez
+            fit=fit,  # Ensure dict can be saved properly
+            run_params=run_params,  # Ensure dict can be saved properly
         )
 
 # define run params here ------------------------------------------- #
