@@ -39,6 +39,8 @@ logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR) # suppress 
 # utility functions ------------------------------------------------ #
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
+
+    
     parser.add_argument('--session_id', type=str, default=None)
     parser.add_argument('--features_to_drop', type = list, default = None)
     parser.add_argument('--logging_level', type=str, default='INFO')
