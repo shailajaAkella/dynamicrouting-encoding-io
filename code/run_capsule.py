@@ -40,7 +40,7 @@ logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR) # suppress 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('--session_id', type=str, default=None)
-    parser.models_to_run('--features_to_drop', type = list, default = None)
+    parser.add_argument('--features_to_drop', type = list, default = None)
     parser.add_argument('--logging_level', type=str, default='INFO')
     parser.add_argument('--test', type=int, default=0)
     parser.add_argument('--update_packages_from_source', type=int, default=1)
